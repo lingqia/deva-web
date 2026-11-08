@@ -106,7 +106,7 @@ function FolderPickerDialog({ onClose }: { onClose: (r: OpenFolderResult | null)
     try {
       const res = await window.deva.fs.browse({ path, cursor })
       setBrowse(res)
-      setPathInput(res.current)
+      setPathInput(res.current ?? '')
       setSel(-1)
     } catch (err) {
       setError({ kind: classifyError(err), detail: err instanceof Error ? err.message : undefined })
@@ -130,7 +130,7 @@ function FolderPickerDialog({ onClose }: { onClose: (r: OpenFolderResult | null)
     if (!loading) void load(path)
   }
   const submitPath = (): void => {
-    const p = pathInput.trim()
+    const p = (pathInput ?? '').trim()
     if (p && !loading) void load(p)
   }
   const loadMore = (): void => {
@@ -233,7 +233,7 @@ function FolderPickerDialog({ onClose }: { onClose: (r: OpenFolderResult | null)
         <div className="fpicker__pathrow">
           <input
             className="input fpicker__path"
-            value={pathInput}
+            value={pathInput ?? ''}
             autoFocus
             spellCheck={false}
             placeholder={t('folderPicker.pathPlaceholder')}
@@ -246,7 +246,7 @@ function FolderPickerDialog({ onClose }: { onClose: (r: OpenFolderResult | null)
               }
             }}
           />
-          <button type="button" className="btn" disabled={busy || !pathInput.trim()} onClick={submitPath}>
+          <button type="button" className="btn" disabled={busy || !(pathInput ?? '').trim()} onClick={submitPath}>
             {t('folderPicker.go')}
           </button>
         </div>

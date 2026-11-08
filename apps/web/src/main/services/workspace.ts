@@ -208,7 +208,7 @@ async function browseDir(abs: string, cursor: unknown): Promise<BrowseResult | B
 export function restoreTrustedRoots(): void {
   const roots = listSessions()
     .map((m) => m.focusRoot)
-    .filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
+    .filter((r): r is string => typeof r === 'string' && (r ?? '').trim().length > 0)
   for (const root of roots) {
     try {
       const real = realpathSync(root)
