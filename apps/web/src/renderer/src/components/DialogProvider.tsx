@@ -92,9 +92,16 @@ export function DialogProvider({ children }: { children: ReactNode }): React.JSX
   )
 }
 
+const _noopDialog: DialogApi = {
+  confirm: async () => false,
+  prompt: async () => null,
+}
+
 export function useDialog(): DialogApi {
   const ctx = useContext(DialogContext)
-  if (!ctx) throw new Error('useDialog 必须在 DialogProvider 内使用')
+  if (!ctx) {
+        return _noopDialog
+  }
   return ctx
 }
 

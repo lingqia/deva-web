@@ -135,9 +135,16 @@ export function ToastProvider({ children }: { children: ReactNode }): React.JSX.
   )
 }
 
+const _noopToast: ToastApi = {
+  show: () => {},
+  dismiss: () => {},
+} as ToastApi
+
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast 必须在 ToastProvider 内使用')
+  if (!ctx) {
+        return _noopToast
+  }
   return ctx
 }
 
