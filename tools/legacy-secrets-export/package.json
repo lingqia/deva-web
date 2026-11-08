@@ -1,0 +1,21 @@
+{
+  "name": "@deva/legacy-secrets-export",
+  "version": "0.1.0",
+  "private": true,
+  "description": "一次性迁移工具:在旧电脑上以原 Electron 身份解密桌面版 safeStorage 密钥库,输出加密迁移包;在 Web 服务器上用纯 Node 导入并按 Web 主密钥重新加密。",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "export": "npm run build && electron . --export",
+    "import": "node dist/main.js --import",
+    "test": "npm run build && node test/run.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^33.0.0",
+    "typescript": "^5.7.2"
+  }
+}

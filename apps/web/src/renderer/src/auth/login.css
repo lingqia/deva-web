@@ -1,0 +1,154 @@
+/*
+ * 登录页样式(P5)。只走 styles/tokens.css 的语义变量(--bg/--fg/--accent/...),
+ * 明暗主题随 <html data-theme> 自动切换,与 redesign token 体系同源、组件层不感知主题。
+ */
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  padding: var(--space-5);
+}
+
+.login-card {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.login-brand__icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+.login-brand__name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: 0.2px;
+}
+
+.login-card__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.login-field {
+  position: relative;
+  display: flex;
+}
+
+.login-input {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 38px 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+}
+
+.login-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.login-input:disabled {
+  opacity: 0.6;
+}
+
+.login-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.login-toggle:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+.login-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--danger);
+}
+
+.login-submit {
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 启动占位(loading / 业务分包加载中) */
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.boot-splash__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: boot-spin 0.9s linear infinite;
+}
+
+@keyframes boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

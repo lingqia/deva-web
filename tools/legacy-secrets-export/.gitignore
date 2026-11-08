@@ -1,0 +1,7 @@
+# 本工具不进 pnpm workspace;依赖由使用者在旧机器安装
+node_modules/
+dist/
+
+# 迁移包与口令相关产物绝不入库
+deva-secrets-export*.json
+*.bak-*

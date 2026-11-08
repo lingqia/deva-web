@@ -1,0 +1,25 @@
+{
+  "name": "deva-workspace",
+  "private": true,
+  "description": "Deva - 对话式 AI 助手 · All in Chat",
+  "license": "MIT",
+  "packageManager": "pnpm@10.8.0",
+  "engines": {
+    "node": ">=22.12 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @deva/web dev",
+    "build": "pnpm --filter @deva/web build",
+    "start": "pnpm --filter @deva/web start",
+    "typecheck": "pnpm --filter @deva/web typecheck",
+    "test": "pnpm --filter @deva/web test",
+    "test:e2e": "pnpm --filter @deva/web test:e2e"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "@lydell/node-pty"
+    ]
+  }
+}

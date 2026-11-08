@@ -1,0 +1,29 @@
+[Unit]
+Description=Deva Web
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=deva
+Group=deva
+WorkingDirectory=/opt/deva/current
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/deva/deva-web.env
+ExecStart=/usr/bin/node /opt/deva/current/apps/web/out/server/index.cjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+KillMode=control-group
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
+
+# 说明(web-migration-plan.md §11.2):
+# - /usr/bin/node 为示例,部署时确认实际绝对路径与版本(不要依赖交互 shell 的 nvm 初始化)。
+# - /etc/deva/deva-web.env 由 systemd 读取,权限 root:root 0600;样例见 deploy/deva-web.env.example,
+#   其中占位符必须全部替换 —— 应用会拒绝示例占位 token。
+# - 专用服务账号 deva、数据目录 /var/lib/deva(DEVA_HOME)与工作区目录需预先创建并授权;
+#   代码目录(/opt/deva)与数据目录分开。
+# - PTY 原生构建如需 python3/make/g++,在目标系统准备;Git 与可用 shell 必须安装。

@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deva · 对话式 AI 助手</title>
+<meta name="description" content="Deva：对话式 AI 助手。把 Agent 能力装进对话里，无需复杂配置，像聊天一样使用 Agent。挂载文件夹即可阅读代码、修改文件、执行命令；支持多角色、子代理、计划批准、代码回退、定时任务、手机 IM 远程对话。开源免费，Windows / macOS。" />
+<meta property="og:title" content="Deva · 对话式 AI 助手" />
+<meta property="og:description" content="All in Chat：要做的事，在对话里说一句就行。开源免费，Windows / macOS。" />
+<meta name="theme-color" content="#4F46E5" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234F46E5'/%3E%3Cstop offset='1' stop-color='%237C3AED'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1024' height='1024' rx='224' fill='url(%23g)'/%3E%3Cg fill='%23fff' transform='translate(-27 -26)'%3E%3Crect x='312' y='272' width='96' height='380' rx='48'/%3E%3Ccircle cx='360' cy='756' r='48'/%3E%3Cpath d='M468 320 H500 A218 218 0 0 1 500 756 H468' fill='none' stroke='%23fff' stroke-width='96'/%3E%3C/g%3E%3C/svg%3E" />
+<style>
+  :root {
+    --nav-h: 64px;
+    --bg: #fbfbfd;
+    --bg-soft: #f3f2fa;
+    --card: #ffffff;
+    --fg: #17171c;
+    --fg-muted: #565663;
+    --fg-subtle: #8a8a96;
+    --border: #e6e5ee;
+    --border-strong: #d6d4e2;
+    --accent: #5b47e6;
+    --accent-ink: #4f3fd1;
+    --accent-tint: rgba(91, 71, 230, 0.09);
+    --grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    --success: #2f9e44;
+    --danger: #e5484d;
+    --warn: #c2410c;
+    --warn-tint: rgba(234, 88, 12, 0.08);
+    --shadow: 0 1px 2px rgba(24, 20, 60, 0.05), 0 12px 32px -12px rgba(40, 30, 110, 0.18);
+    --shadow-lg: 0 2px 6px rgba(24, 20, 60, 0.06), 0 40px 80px -30px rgba(50, 35, 140, 0.35);
+    --radius: 14px;
+    --ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+    --font: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Cascadia Code", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  /* 深色：<html data-theme="dark">（页头脚本按记住的选择或系统偏好设上）；整页与演示界面都只用 token 取色，切换即一起跟着变 */
+  :root[data-theme="dark"] {
+    --bg: #0d0d13;
+    --bg-soft: #13121c;
+    --card: #17161f;
+    --fg: #ececf2;
+    --fg-muted: #a6a5b4;
+    --fg-subtle: #74737f;
+    --border: #26252f;
+    --border-strong: #34333f;
+    --accent: #8f80ff;
+    --accent-ink: #a597ff;
+    --accent-tint: rgba(143, 128, 255, 0.12);
+    --success: #51cf66;
+    --danger: #ff6b6b;
+    --warn: #fb923c;
+    --warn-tint: rgba(251, 146, 60, 0.1);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 40px 80px -30px rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  svg.i.sm { width: 13px; height: 13px; stroke-width: 2.4; }
+  code, kbd { font-family: var(--mono); font-size: 0.88em; }
+  code { padding: 1px 6px; border-radius: 6px; background: var(--accent-tint); color: var(--accent-ink); }
+  kbd { padding: 1px 6px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; background: var(--card); }
+
+  .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 96px 0; }
+  .eyebrow { display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: var(--accent-ink); margin-bottom: 12px; }
+  h2 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.3; margin: 0 0 14px; letter-spacing: -0.01em; }
+  .sec-lead { color: var(--fg-muted); max-width: 640px; margin: 0 0 48px; text-wrap: pretty; }
+
+  /* ---------- 顶栏 ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 20; height: var(--nav-h);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  }
+  .nav .wrap { display: flex; align-items: center; gap: 28px; height: 100%; max-width: 1280px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .brand svg { width: 30px; height: 30px; }
+  .nav__links { display: flex; gap: 24px; margin-left: 8px; font-size: 14px; color: var(--fg-muted); }
+  .nav__links a:hover { color: var(--fg); }
+  .nav__right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 44px; padding: 0 20px; border-radius: 11px;
+    font-size: 15px; font-weight: 600; white-space: nowrap;
+    border: 1px solid var(--border-strong); background: var(--card); color: var(--fg);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .btn--primary { border: none; background: var(--grad); color: #fff; box-shadow: 0 8px 24px -8px rgba(91, 71, 230, 0.6); }
+  .btn--primary:hover { box-shadow: 0 12px 28px -8px rgba(91, 71, 230, 0.75); }
+  .btn--sm { height: 36px; padding: 0 14px; font-size: 14px; border-radius: 9px; }
+  .icon-link { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: var(--fg-muted); }
+  .icon-link:hover { color: var(--fg); background: var(--bg-soft); }
+  .theme-btn { border: none; background: none; padding: 0; cursor: pointer; }
+  .theme-btn .sun, [data-theme="dark"] .theme-btn .moon { display: none; }
+  [data-theme="dark"] .theme-btn .sun { display: block; }
+
+  /* ---------- 首屏 ---------- */
+  .hero { position: relative; padding: 96px 0 40px; overflow-x: clip; text-align: center; }
+  .hero::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 700px; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(closest-side, rgba(124, 58, 237, 0.13), transparent) 15% 50% / 620px 520px no-repeat,
+      radial-gradient(closest-side, rgba(79, 70, 229, 0.12), transparent) 85% 30% / 680px 520px no-repeat;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 14px 5px 6px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
+    font-size: 13px; color: var(--fg-muted);
+  }
+  .chip b { padding: 2px 10px; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 600; font-size: 12px; }
+  .hero h1 { font-size: clamp(38px, 6.4vw, 66px); line-height: 1.12; margin: 26px 0 20px; letter-spacing: -0.02em; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero__lead { font-size: clamp(16px, 1.8vw, 19px); color: var(--fg-muted); margin: 0 auto 34px; max-width: 640px; text-wrap: balance; }
+  .hero__cta { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .hero__meta { margin-top: 20px; font-size: 13px; color: var(--fg-subtle); display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+  .hero__meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .hero__meta svg.i { width: 15px; height: 15px; color: var(--success); }
+  .hero__hint { margin-top: 56px; display: inline-flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; color: var(--fg-subtle); }
+  .hero__hint svg.i { width: 18px; height: 18px; animation: nudge 1.8s ease-in-out infinite; }
+  @keyframes nudge { 50% { transform: translateY(5px); } }
+
+  /* ============ 演示：主界面占一屏，各章自动依次播放——同一个对话里依次演示各个功能 ============ */
+  .stage { scroll-margin-top: var(--nav-h); }
+  .stage__pin { height: calc(100vh - var(--nav-h)); min-height: 520px; max-height: 960px; padding: 16px 0 20px; }
+  .stage__pin > .wrap { max-width: 1280px; height: 100%; display: flex; flex-direction: column; gap: 12px; }
+  /* 说明条：在界面上方，随章节横向切入切出 */
+  .stage__bar { flex: none; display: flex; align-items: center; gap: 24px; }
+  .stage__caps { flex: 1; min-width: 0; display: grid; overflow: hidden; }
+  .cap {
+    grid-area: 1 / 1; display: flex; align-items: center; gap: 16px; min-width: 0;
+    opacity: 0; transform: none; transition: opacity 0.35s ease, transform 0.5s var(--ease); pointer-events: none;
+  }
+  .cap.is-on { opacity: 1; transform: none; }
+  .cap.is-out { transform: translateX(var(--out, -70px)); }
+  .cap__tag { flex: none; padding: 5px 13px; border-radius: 999px; background: var(--grad); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .cap__txt { min-width: 0; }
+  .cap h3 { margin: 0; font-size: clamp(19px, 2vw, 23px); line-height: 1.35; letter-spacing: -0.01em; }
+  .cap p { margin: 1px 0 0; color: var(--fg-muted); font-size: 14.5px; line-height: 1.6; }
+  .stage__meta { flex: none; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--fg-subtle); }
+  .stage__count { font-variant-numeric: tabular-nums; }
+  .stage__count b { color: var(--fg); font-size: 17px; }
+  .stage__nav { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg-muted); cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease; }
+  .stage__nav:hover { color: var(--fg); border-color: var(--accent); }
+  .stage__nav svg.i { width: 15px; height: 15px; stroke-width: 2.2; }
+  .stage__nav--prev svg.i { transform: scaleX(-1); }
+  .stage__progress { flex: none; height: 3px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .stage__progress i { display: block; width: 0; height: 100%; background: var(--grad); transition: width 0.5s var(--ease); }
+  .stage__view { flex: 1; min-height: 0; }
+
+  /* ---------- 应用窗口 ---------- */
+  .mock {
+    height: 100%; max-height: 820px; display: flex; flex-direction: column;
+    border-radius: 16px; border: 1px solid var(--border-strong); background: var(--card);
+    box-shadow: var(--shadow-lg); overflow: hidden; font-size: 14px; line-height: 1.6;
+  }
+  .mock__bar { flex: none; height: 34px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border-bottom: 1px solid var(--border); background: var(--bg-soft); }
+  .mock__bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--border-strong); }
+  .mock__body { flex: 1; min-height: 0; display: grid; grid-template-columns: 56px 230px 1fr; }
+  .mock__rail { border-right: 1px solid var(--border); background: var(--bg-soft); display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; }
+  .mock__rail .me { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #38bdf8, #2563eb); margin-bottom: 8px; }
+  .mock__rail span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: var(--fg-subtle); }
+  .mock__rail span.on { background: var(--accent-tint); color: var(--accent); }
+  .mock__rail span.end { margin-top: auto; }
+  .mock__rail svg.i { width: 18px; height: 18px; }
+  .mock__list { border-right: 1px solid var(--border); padding: 12px 10px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .mock__search { flex: none; height: 32px; border-radius: 8px; border: 1px solid var(--border); color: var(--fg-subtle); font-size: 12.5px; display: flex; align-items: center; gap: 8px; padding: 0 10px; margin-bottom: 8px; }
+  .mock__search svg.i { width: 14px; height: 14px; }
+  .conv { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; }
+  .conv.is-on { background: var(--accent-tint); }
+  .conv > div { min-width: 0; }
+  .conv b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv small { display: block; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv small.swap { animation: swap 0.4s var(--ease) both; }
+  @keyframes swap { from { opacity: 0; transform: translateX(-8px); } }
+  .ava { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; }
+  .ava--deva { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+  .ava--wk { background: linear-gradient(135deg, #34d399, #059669); }
+  .ava--tr { background: linear-gradient(135deg, #fbbf24, #d97706); }
+  .ava--ma { background: linear-gradient(135deg, #f472b6, #db2777); }
+
+  /* 对话区：消息从顶部往下排，超出后始终贴住最新一条（与真实对话一致） */
+  .mock__chat { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .chat__head { flex: none; height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 22px; border-bottom: 1px solid var(--border); font-weight: 700; }
+  .chat__head small { font-weight: 400; color: var(--fg-subtle); font-size: 12.5px; }
+  .chat__ws { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 12.5px; color: var(--fg-muted); padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; }
+  .chat__ws[hidden] { display: none; }
+  .chat__ws svg.i { width: 14px; height: 14px; }
+  .chat__ws.pop { animation: pop 0.45s var(--ease); }
+  .chat__scroll { flex: 1; min-height: 0; overflow: hidden; padding: 18px 28px 14px; }
+  .chat__list { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; transition: padding-right 0.5s var(--ease), opacity 0.4s; }
+  .stage.phone-on .chat__list { padding-right: 300px; }
+  .chat__overlay { position: absolute; left: 0; right: 0; top: 50px; bottom: 0; z-index: 3; pointer-events: none; }
+
+  .enter { animation: rise 0.45s var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+  @keyframes pop { 40% { transform: scale(0.8); } 100% { transform: scale(1); } }
+  /* 模拟点击：按下回弹 + 光圈 */
+  .pressed { animation: press 0.38s ease; }
+  @keyframes press { 35% { transform: scale(0.92); box-shadow: 0 0 0 6px var(--accent-tint); } }
+
+  .m-user { align-self: flex-end; max-width: 72%; padding: 9px 15px; border-radius: 16px 16px 4px 16px; background: var(--grad); color: #fff; }
+  .m-user small { display: block; font-size: 11px; opacity: 0.8; }
+  .m-user code { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  .m-text p { margin: 0; }
+  .m-think { align-self: flex-start; display: inline-flex; gap: 5px; padding: 11px 14px; border-radius: 14px; background: var(--bg-soft); border: 1px solid var(--border); }
+  .m-think i { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-subtle); animation: blink 1s infinite; }
+  .m-think i:nth-child(2) { animation-delay: 0.15s; }
+  .m-think i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.25; transform: none; } 40% { opacity: 1; transform: translateY(-3px); } }
+  .caret { display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; border-radius: 2px; background: var(--accent); animation: caret 1s steps(2) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  .m-tool { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); font-size: 13px; min-width: 0; }
+  .m-tool > svg.i { width: 15px; height: 15px; color: var(--fg-subtle); }
+  .m-tool > span:not(.badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 1px 9px; border-radius: 999px; }
+  .badge svg.i { width: 12px; height: 12px; stroke-width: 2.4; }
+  .badge--ok { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); animation: pop 0.35s var(--ease); }
+  .badge--run { color: var(--accent); background: var(--accent-tint); }
+  .spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .add { color: var(--success); font-family: var(--mono); font-size: 12px; }
+  .del { color: var(--danger); font-family: var(--mono); font-size: 12px; }
+
+  .mbtn { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; padding: 4px 13px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--card); white-space: nowrap; }
+  .mbtn--p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mbtn--ghost { border-color: transparent; background: none; color: var(--fg-muted); }
+  .m-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .m-actions.end { justify-content: flex-end; }
+
+  /* 需用户交互的卡片：未决 accent 观感；用户批准后淡化底框、图标与徽标转成功绿 */
+  .m-card, .m-mount, .m-askc { border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--card)); border-radius: 12px; padding: 12px 16px; transition: background 0.4s, border-color 0.4s; }
+  .m-card__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .m-card__head > svg.i { width: 16px; height: 16px; color: var(--accent); }
+  .m-card ol { margin: 6px 0 0; padding-left: 20px; }
+  .m-card li { margin: 2px 0; }
+  .okbadge { margin-left: auto; flex: none; font-size: 12px; font-weight: 600; padding: 1px 10px; border-radius: 999px; color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+  .okbadge:empty { display: none; }
+  .is-ok { border-color: var(--border) !important; background: var(--card) !important; }
+  .is-ok .m-card__head > svg.i { color: var(--success); }
+  .m-mount__body { margin-top: 4px; font-size: 13px; color: var(--fg-muted); }
+  .m-plan__sum { display: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg-muted); }
+  .m-plan.is-ok ol { display: none; }
+  .m-plan.is-ok .m-plan__sum { display: block; }
+
+  .m-done { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font-size: 13px; }
+  .m-done > svg.i { width: 15px; height: 15px; color: var(--accent); }
+  .m-done > span:not(.badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-done__n { flex: none; color: var(--fg-subtle); }
+
+  .m-sub { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 10px 14px; }
+  .m-sub__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .m-sub__head > svg.i { width: 16px; height: 16px; color: var(--accent); }
+  .m-sub__head b { flex: none; font-size: 12px; padding: 0 8px; border-radius: 6px; background: var(--accent-tint); color: var(--accent-ink); }
+  .m-sub__head > span:not(.badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-sub__steps { margin: 6px 0 0 24px; padding-left: 12px; border-left: 2px solid var(--border); font-size: 12.5px; color: var(--fg-subtle); display: flex; flex-direction: column; }
+  .m-sub__steps:empty { display: none; }
+  .m-sub__steps span { animation: rise 0.35s var(--ease) both; }
+
+  .m-askc__q { margin: 4px 0 8px; }
+  .m-askc__opts { display: flex; flex-direction: column; gap: 6px; }
+  .opt { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--card); font-size: 13px; transition: border-color 0.25s, background 0.25s; }
+  .opt i { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-strong); transition: border 0.25s; }
+  .opt.is-on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .opt.is-on i { border: 4.5px solid var(--accent); }
+  .opt em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-tint); padding: 0 7px; border-radius: 999px; }
+  .opt--own { color: var(--fg-muted); }
+  .m-ask { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); min-width: 0; }
+  .m-ask > svg.i { width: 15px; height: 15px; color: var(--fg-subtle); }
+  .m-ask b { flex: none; }
+  .m-ask > span:not(.badge) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); font-size: 13px; }
+
+  .m-task { display: flex; gap: 12px; align-items: flex-start; }
+  .m-task > svg.i { color: var(--accent); margin-top: 2px; }
+  .m-task__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .m-task__body b { font-size: 15px; }
+  .m-task__body small { font-size: 12px; color: var(--fg-muted); }
+  .m-task__body span { margin-top: 4px; font-size: 13px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-task .m-actions { margin-top: 0; flex-wrap: nowrap; }
+  .m-taskdone { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+  .m-taskdone > svg.i { color: var(--success); }
+  .m-taskdone > span:not(.mbtn) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .m-taskdone b { display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; }
+  .m-taskdone b svg.i { color: var(--success); }
+  .m-taskdone small { color: var(--fg-muted); font-size: 12px; }
+
+  .m-agent { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border-strong); background: var(--card); box-shadow: var(--shadow); max-width: 520px; }
+  .m-agent .ava { width: 52px; height: 52px; font-size: 20px; }
+  .m-agent__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .m-agent__body small { font-size: 11.5px; color: var(--fg-subtle); }
+  .m-agent__body b { font-size: 16px; }
+  .m-agent__body span { font-size: 12.5px; color: var(--fg-muted); }
+  .m-agent__hint { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--accent); font-weight: 600; }
+  .m-agent.is-ok .m-agent__hint { color: var(--success); }
+
+  .m-notify {
+    position: absolute; top: 12px; right: 22px; width: 330px; max-width: calc(100% - 44px);
+    display: flex; gap: 12px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--border-strong); background: var(--card); box-shadow: var(--shadow-lg);
+  }
+  .m-notify.enter { animation: drop 0.45s var(--ease) both; }
+  .m-notify.leave { animation: lift 0.3s ease forwards; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-14px); } }
+  @keyframes lift { to { opacity: 0; transform: translateY(-10px); } }
+  .m-notify svg { width: 30px; height: 30px; flex: none; }
+  .m-notify b { display: block; font-size: 13px; }
+  .m-notify small { display: block; font-size: 12px; color: var(--fg-muted); }
+
+  .m-dim { position: absolute; inset: 0; background: rgba(15, 12, 35, 0.32); }
+  .m-dim.enter { animation: fade 0.3s both; }
+  @keyframes fade { from { opacity: 0; } }
+  .m-modal {
+    position: absolute; left: 50%; top: 46%; translate: -50% -50%; width: min(500px, calc(100% - 32px));
+    border-radius: 14px; border: 1px solid var(--border-strong); background: var(--card); box-shadow: var(--shadow-lg); padding: 16px 18px;
+  }
+  .m-modal.enter { animation: zoom 0.35s var(--ease) both; }
+  @keyframes zoom { from { opacity: 0; transform: scale(0.95); } }
+  .m-modal__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .m-modal__head svg.i { width: 17px; height: 17px; color: var(--accent); }
+  .m-modal__head kbd { margin-left: auto; font-size: 11.5px; }
+  .m-turn { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; font-size: 13px; color: var(--fg-muted); border: 1px solid transparent; transition: background 0.25s, border-color 0.25s, color 0.25s; }
+  .m-turn i { font-style: normal; font-family: var(--mono); font-size: 11.5px; color: var(--fg-subtle); }
+  .m-turn > span:last-child { margin-left: auto; font-size: 12px; white-space: nowrap; }
+  .m-turn .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-turn.is-sel { border-color: var(--accent); background: var(--accent-tint); color: var(--fg); }
+  .m-modes { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  .m-modes span { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--fg-muted); }
+  .m-modes span.is-on { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-tint); font-weight: 600; }
+
+  .m-phone {
+    position: absolute; right: 26px; top: 14px; bottom: 100px; width: 270px;
+    border-radius: 30px; border: 7px solid #1c1b24; background: var(--bg); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; overflow: hidden; font-size: 12.5px;
+  }
+  .m-phone.enter { animation: slide-l 0.55s var(--ease) both; }
+  @keyframes slide-l { from { opacity: 0; transform: translateX(60px); } }
+  .m-phone__top { flex: none; padding: 14px 14px 8px; border-bottom: 1px solid var(--border); text-align: center; background: var(--card); }
+  .m-phone__top b { display: block; font-size: 13px; }
+  .m-phone__top small { font-size: 11px; color: var(--fg-subtle); }
+  .m-phone__msgs { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 12px; }
+  .pm { max-width: 88%; padding: 7px 11px; border-radius: 12px 12px 12px 4px; background: var(--card); border: 1px solid var(--border); }
+  .pm--me { align-self: flex-end; border: none; border-radius: 12px 12px 4px 12px; background: #3370ff; color: #fff; }
+  .pm code { font-size: 11px; }
+  .m-phone__input { flex: none; margin: 0 10px 12px; padding: 7px 12px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); font-size: 12px; color: var(--fg-subtle); }
+
+  .mock__composer { flex: none; width: calc(100% - 40px); max-width: 820px; margin: 0 auto 16px; }
+  .m-box { border: 1px solid var(--border-strong); border-radius: 14px; padding: 10px 12px; background: var(--card); }
+  .m-box .ph { color: var(--fg-subtle); height: 30px; }
+  .ph.has-text, .pin.has-text { color: var(--fg); }
+  .ph.has-text::after, .pin.has-text::after { content: ""; display: inline-block; width: 1.5px; height: 1em; margin-left: 1px; vertical-align: -0.15em; background: var(--fg); animation: caret 1s steps(2) infinite; }
+  .m-tbar { display: flex; align-items: center; gap: 14px; color: var(--fg-subtle); font-size: 12px; }
+  .m-tbar span { display: inline-flex; align-items: center; gap: 5px; }
+  .m-tbar svg.i { width: 14px; height: 14px; }
+  .m-tbar .model { margin-left: auto; color: var(--fg-muted); }
+  .m-tbar .model::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4d6bfe; }
+  .m-tbar .send { padding: 4px 14px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
+
+  /* 待办清单面板：输入框上方展开，随工具调用逐项打勾，全部完成后收进对话里的「已完成清单」卡 */
+  .m-todo { margin: 0 0 8px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); font-size: 13px; }
+  .m-todo[hidden] { display: none; }
+  .m-todo__head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .m-todo__head svg.i { width: 15px; height: 15px; color: var(--accent); }
+  .m-todo__head > span:not(.m-todo__bar) { color: var(--fg-subtle); }
+  .m-todo__head em { margin-left: auto; font-style: normal; font-weight: 600; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .m-todo__bar { width: 96px; height: 6px; border-radius: 6px; background: var(--bg-soft); border: 1px solid var(--border); overflow: hidden; }
+  .m-todo__bar i { display: block; width: 0; height: 100%; background: var(--grad); transition: width 0.4s var(--ease); }
+  .m-todo ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; }
+  .m-todo li { display: flex; align-items: center; gap: 8px; min-width: 0; transition: color 0.3s; }
+  .mk { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; transition: background 0.3s, border-color 0.3s; }
+  .mk svg.i { width: 10px; height: 10px; stroke-width: 3.2; color: #fff; opacity: 0; transition: opacity 0.2s; }
+  .m-todo li.doing .mk { border-color: var(--accent); border-right-color: transparent; animation: spin 0.8s linear infinite; }
+  .m-todo li.done { color: var(--fg-muted); }
+  .m-todo li.done .mk { background: var(--success); border-color: var(--success); animation: pop 0.35s var(--ease); }
+  .m-todo li.done .mk svg.i { opacity: 1; }
+
+  /* ---------- 更多功能 ---------- */
+  .features { background: var(--bg-soft); border-block: 1px solid var(--border); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feat { padding: 26px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); transition: border-color 0.2s ease, transform 0.2s ease; }
+  .feat:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); transform: translateY(-2px); }
+  .feat__icon { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); margin-bottom: 16px; }
+  .feat h3 { margin: 0 0 8px; font-size: 18px; }
+  .feat p { margin: 0; color: var(--fg-muted); font-size: 15px; }
+  .more { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .more span { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); font-size: 14px; color: var(--fg-muted); }
+
+  /* ---------- 快速开始 ---------- */
+  .providers { display: flex; flex-wrap: wrap; gap: 12px; }
+  .prov { display: inline-flex; align-items: center; gap: 9px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); font-weight: 600; font-size: 15px; }
+  .prov i { width: 10px; height: 10px; border-radius: 50%; }
+  .prov--more { border-style: dashed; color: var(--fg-muted); font-weight: 500; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; margin-top: 56px; }
+  .step { padding: 26px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--grad); color: #fff; font-weight: 700; margin-bottom: 14px; }
+  .step h3 { margin: 0 0 6px; font-size: 17px; }
+  .step p { margin: 0; color: var(--fg-muted); font-size: 15px; }
+
+  /* ---------- 使用须知 ---------- */
+  .notice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .tip { padding: 24px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+  .tip--warn { border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); background: var(--warn-tint); }
+  .tip h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 17px; }
+  .tip--warn h3 { color: var(--warn); }
+  .tip p { margin: 0; color: var(--fg-muted); font-size: 15px; }
+
+  /* ---------- 下载 ---------- */
+  .download { background: var(--bg-soft); border-top: 1px solid var(--border); }
+  .dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .os { padding: 26px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+  .os h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 19px; }
+  .os h3 svg { width: 22px; height: 22px; }
+  .file { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; }
+  .file code { min-width: 0; overflow-wrap: anywhere; background: none; padding: 0; color: var(--fg); font-weight: 600; transition: color 0.15s ease; }
+  .file > span { margin-left: auto; color: var(--fg-subtle); text-align: right; white-space: nowrap; }
+  .file svg.i { width: 16px; height: 16px; color: var(--fg-subtle); transition: color 0.15s ease; }
+  .file:hover code, .file:hover svg.i { color: var(--accent-ink); }
+  .dl__cta { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  details { margin-top: 28px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); padding: 4px 22px; }
+  summary { cursor: pointer; padding: 14px 0; font-weight: 600; }
+  details ul { margin: 0 0 18px; padding-left: 20px; color: var(--fg-muted); font-size: 15px; }
+  pre { margin: 10px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--bg-soft); border: 1px solid var(--border); overflow-x: auto; }
+  pre code { background: none; padding: 0; color: var(--fg); }
+
+  /* ---------- 页脚 ---------- */
+  footer { padding: 40px 0 56px; border-top: 1px solid var(--border); color: var(--fg-subtle); font-size: 14px; }
+  footer .wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  footer .brand { font-size: 15px; color: var(--fg); }
+  footer .brand svg { width: 24px; height: 24px; }
+  footer nav { margin-left: auto; display: flex; gap: 20px; flex-wrap: wrap; }
+  footer a:hover { color: var(--fg); }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 1100px) {
+    .mock__body { grid-template-columns: 56px 1fr; }
+    .mock__list { display: none; }
+  }
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .wrap { padding: 0 16px; }
+    section { padding: 64px 0; }
+    .nav__links { display: none; }
+    .hero { padding: 56px 0 24px; }
+    .hero__lead br { display: none; }
+    .hero__hint { margin-top: 36px; }
+    .grid, .steps, .notice, .dl { grid-template-columns: 1fr; }
+    .stage__pin { padding: 10px 0 12px; }
+    .stage__pin > .wrap { gap: 10px; }
+    .stage__bar { gap: 12px; align-items: flex-start; }
+    .cap { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .cap__tag { padding: 3px 11px; font-size: 12px; }
+    .cap h3 { font-size: 18px; }
+    .cap p { font-size: 13.5px; }
+    .mock { font-size: 13px; border-radius: 14px; }
+    .mock__bar { display: none; }
+    .mock__body { grid-template-columns: 1fr; }
+    .mock__rail { display: none; }
+    .chat__head { padding: 0 14px; height: 44px; }
+    .chat__head small { display: none; }
+    .chat__overlay { top: 44px; }
+    .chat__scroll { padding: 12px 12px 10px; }
+    .m-user { max-width: 88%; }
+    .m-task { flex-wrap: wrap; }
+    .m-task .m-actions { width: 100%; justify-content: flex-end; }
+    .m-task .mbtn--ghost { display: none; }
+    .m-agent__hint { display: none; }
+    .m-taskdone .mbtn { display: none; }
+    .stage.phone-on .chat__list { padding-right: 0; opacity: 0.25; }
+    .m-phone { left: 50%; right: auto; translate: -50% 0; width: min(270px, calc(100% - 24px)); top: 10px; bottom: 92px; }
+    .mock__composer { width: calc(100% - 20px); margin-bottom: 10px; }
+    .m-tbar .attach { display: none; }
+    .m-todo ul { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .btn, .feat, .cap, .chat__list, .stage__progress i, .m-todo__bar i { transition: none; }
+    .hero__hint svg.i, .caret, .m-think i, .spin, .enter, .pressed, .badge--ok { animation: none; }
+  }
+</style>
+<script>
+  // 尽早定下深浅色（记住的选择优先，否则跟随系统），免得首屏先闪一下浅色
+  ;(() => {
+    let t = null
+    try { t = localStorage.getItem('deva-site-theme') } catch {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    document.documentElement.dataset.theme = t
+  })()
+</script>
+</head>
+<body>
+
+<!-- 图标（lucide 风格线性图标） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#7C3AED"/></linearGradient>
+  </defs>
+  <symbol id="logo" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="224" fill="url(#logo-g)"/><g fill="#fff" transform="translate(-27 -26)"><rect x="312" y="272" width="96" height="380" rx="48"/><circle cx="360" cy="756" r="48"/><path d="M468 320 H500 A218 218 0 0 1 500 756 H468" fill="none" stroke="#fff" stroke-width="96" stroke-linejoin="round"/></g></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-ask" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol>
+  <symbol id="i-plan" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+  <symbol id="i-listc" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+  <symbol id="i-git" viewBox="0 0 24 24"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></symbol>
+  <symbol id="i-gh" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8 0 3.2.9.8 1.3 1.9 1.3 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1 .9 2.2v3.3c0 .3.1.7.8.6A12 12 0 0 0 12 .3"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M3 5.1 10.4 4v7.1H3zm8.4-1.3L21 2.5v8.6h-9.6zM3 12.9h7.4V20L3 18.9zm8.4 0H21v8.6l-9.6-1.4z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-4.1zM14 5.2c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4z"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><svg><use href="#logo"/></svg>Deva</a>
+    <nav class="nav__links">
+      <a href="#stage">看它怎么做</a>
+      <a href="#more">更多功能</a>
+      <a href="#start">快速开始</a>
+      <a href="#notice">使用须知</a>
+      <a href="#deploy">部署</a>
+    </nav>
+    <div class="nav__right">
+      <button class="icon-link theme-btn" type="button" aria-label="切换深色模式" title="切换深色模式"><svg class="i moon"><use href="#i-moon"/></svg><svg class="i sun"><use href="#i-sun"/></svg></button>
+      <a class="icon-link" href="https://github.com/sqfcyily/deva" aria-label="GitHub" title="GitHub"><svg class="i"><use href="#i-gh"/></svg></a>
+      <a class="btn btn--primary btn--sm" href="#deploy"><svg class="i"><use href="#i-down"/></svg>部署</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- 首屏 -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="chip"><b>All in Chat</b>开源免费 · 自托管</span>
+      <h1>对话式<br /><span class="grad-text">AI 助手</span></h1>
+      <p class="hero__lead">把 Agent 能力装进对话里，无需复杂配置，像聊天一样使用 Agent。<br />挂载文件夹即可阅读代码、修改文件、执行命令；定时任务按时自动运行，离开电脑也能在手机上继续对话。</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary" href="#deploy"><svg class="i"><use href="#i-down"/></svg>部署指南</a>
+        <a class="btn" href="https://github.com/sqfcyily/deva"><svg class="i"><use href="#i-gh"/></svg>查看源码</a>
+      </div>
+      <div class="hero__meta">
+        <span><svg class="i"><use href="#i-check"/></svg>用你自己的 API 密钥</span>
+        <span><svg class="i"><use href="#i-check"/></svg>数据都在本机</span>
+        <span><svg class="i"><use href="#i-check"/></svg>MIT 开源</span>
+      </div>
+      <a class="hero__hint" href="#stage">向下滚动，看它怎么做<svg class="i"><use href="#i-arrow-down"/></svg></a>
+    </div>
+  </section>
+
+  <!-- 演示：同一个对话，各章自动依次播放 -->
+  <section id="stage" class="stage" style="padding:0">
+    <div class="stage__pin">
+      <div class="wrap">
+        <div class="stage__bar">
+          <div class="stage__caps">
+            <div class="cap is-on"><span class="cap__tag">01 · 挂载工作区</span><div class="cap__txt"><h3>说要看哪个项目，点一下就挂上</h3><p>未挂载时它会弹出卡片请你选文件夹；挂上之后，这个对话就围绕这个项目干活。</p></div></div>
+            <div class="cap"><span class="cap__tag">02 · 动手干活</span><div class="cap__txt"><h3>自己找文件、改代码、跑测试</h3><p>每一步都在对话里看得见；步骤多的活儿列成待办清单，边做边勾，做完收成一张卡片。</p></div></div>
+            <div class="cap"><span class="cap__tag">03 · 子代理并行</span><div class="cap__txt"><h3>大任务拆开，几个子代理同时跑</h3><p>每个子代理有独立上下文，翻过的文件不占主对话，只把结论交回来；不急的还能放到后台。</p></div></div>
+            <div class="cap"><span class="cap__tag">04 · 提问卡</span><div class="cap__txt"><h3>需要你拍板时，给你选项</h3><p>带推荐项，也能自己输入；答完收起成一行，不占地方。</p></div></div>
+            <div class="cap"><span class="cap__tag">05 · 计划批准</span><div class="cap__txt"><h3>大活先列计划，你批准才动手</h3><p>不满意就点「继续完善」让它接着改；点「批准并执行」后才开始改代码。</p></div></div>
+            <div class="cap"><span class="cap__tag">06 · 定时任务</span><div class="cap__txt"><h3>一句话建定时任务</h3><p>核对时间和指令后点创建；到点自动运行、全程不打扰，跑完弹系统通知。</p></div></div>
+            <div class="cap"><span class="cap__tag">07 · 新建角色</span><div class="cap__txt"><h3>一句话新建角色</h3><p>它把性格、风格、常用模型拟成一张角色名片，确认后就多了一个专门的助手。</p></div></div>
+            <div class="cap"><span class="cap__tag">08 · 回退</span><div class="cap__txt"><h3>改坏了，退回去</h3><p>输入 <code>/rewind</code> 或连按两次 <kbd>Esc</kbd>，回到任意一轮之前；代码和对话可分开恢复，回退了还能撤销。</p></div></div>
+            <div class="cap"><span class="cap__tag">09 · 手机上接着聊</span><div class="cap__txt"><h3>人不在电脑前，手机上接着聊</h3><p>接入飞书或 Telegram，扫码就配好；手机上发的消息，就是在这个对话里继续聊。</p></div></div>
+          </div>
+          <div class="stage__meta">
+            <button class="stage__nav stage__nav--prev" type="button" aria-label="上一章" title="上一章"><svg class="i"><use href="#i-chev"/></svg></button>
+            <span class="stage__count"><b>1</b> / 9</span>
+            <button class="stage__nav stage__nav--next" type="button" aria-label="下一章" title="下一章"><svg class="i"><use href="#i-chev"/></svg></button>
+          </div>
+        </div>
+        <div class="stage__progress"><i></i></div>
+
+        <div class="stage__view">
+          <div class="mock" aria-label="Deva 界面演示">
+            <div class="mock__bar"><i></i><i></i><i></i></div>
+            <div class="mock__body">
+              <div class="mock__rail">
+                <div class="me"></div>
+                <span class="on"><svg class="i"><use href="#i-chat"/></svg></span>
+                <span><svg class="i"><use href="#i-users"/></svg></span>
+                <span><svg class="i"><use href="#i-alarm"/></svg></span>
+                <span class="end"><svg class="i"><use href="#i-bot"/></svg></span>
+                <span><svg class="i"><use href="#i-cog"/></svg></span>
+              </div>
+              <div class="mock__list">
+                <div class="mock__search"><svg class="i"><use href="#i-search"/></svg>搜索对话</div>
+                <div class="conv conv--cur is-on"><span class="ava ava--deva">D</span><div><b>my-app 日常维护</b><small>刚刚</small></div></div>
+                <div class="conv"><span class="ava ava--tr">译</span><div><b>合同条款翻译</b><small>翻译助手 · 昨天</small></div></div>
+                <div class="conv"><span class="ava ava--deva">D</span><div><b>读书笔记整理</b><small>Deva · 周一</small></div></div>
+              </div>
+              <div class="mock__chat">
+                <div class="chat__head">Deva <small>· my-app 日常维护</small><span class="chat__ws" hidden><svg class="i"><use href="#i-folder"/></svg>my-app</span></div>
+                <div class="chat__scroll"><div class="chat__list"></div></div>
+                <div class="chat__overlay"></div>
+                <div class="mock__composer">
+                  <div class="m-todo" hidden></div>
+                  <div class="m-box">
+                    <div class="ph">跟 Deva 说点什么…</div>
+                    <div class="m-tbar">
+                      <span class="attach"><svg class="i"><use href="#i-clip"/></svg></span>
+                      <span class="model">deepseek-chat</span>
+                      <span class="send">发送</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 更多功能 -->
+  <section id="more" class="features">
+    <div class="wrap">
+      <span class="eyebrow">MORE</span>
+      <h2>还有这些</h2>
+      <p class="sec-lead">不挂文件夹时，它是面向整台电脑的通用助手；挂上一个文件夹，它就围绕这个项目工作。</p>
+      <div class="grid">
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-users"/></svg></div>
+          <h3>多角色，各有所长</h3>
+          <p>内置全能助手 Deva 和安全研究专家小码酱；自己建的角色也有独立的性格、头像和常用模型。</p>
+        </div>
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-bookmark"/></svg></div>
+          <h3>记住你的习惯</h3>
+          <p>说一句「记住…」它就记下，以后每次对话都参考；也能只记在某个项目里，不进仓库、别人看不到。</p>
+        </div>
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-plug"/></svg></div>
+          <h3>技能与 MCP</h3>
+          <p>用 <code>/技能名</code> 调出写好的做事方法，也能上传技能包；接入 MCP 服务扩展数据库、浏览器等外部工具。</p>
+        </div>
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-chat"/></svg></div>
+          <h3>像聊天软件一样用</h3>
+          <p>附上图片、PDF、代码文件；代码高亮一键复制，长对话右侧有目录可以跳转。</p>
+        </div>
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-git"/></svg></div>
+          <h3>Git 快捷操作</h3>
+          <p>挂载的是 Git 仓库时，旁边显示当前分支，拉取、推送、切换分支、提交一点就好，提交信息可以让 AI 来写。</p>
+        </div>
+        <div class="feat">
+          <div class="feat__icon"><svg class="i"><use href="#i-layers"/></svg></div>
+          <h3>长对话不用担心</h3>
+          <p>快撑满模型上下文时自动把较早的内容压缩成摘要接着聊，也可以随时输入 <code>/compact</code> 手动压缩。</p>
+        </div>
+      </div>
+      <div class="more">
+        <span>按「轮」删除聊天记录</span>
+        <span>项目 AGENTS.md 约定</span>
+        <span>浅色 / 深色 / 跟随系统</span>
+        <span>简体中文 / English</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 快速开始 + 服务商 -->
+  <section id="start">
+    <div class="wrap">
+      <span class="eyebrow">QUICK START</span>
+      <h2>三步开始</h2>
+      <p class="sec-lead">已预置主流服务商，其他服务（含中转站）也能自己添加。</p>
+      <div class="providers">
+        <span class="prov"><i style="background:#4d6bfe"></i>DeepSeek</span>
+        <span class="prov"><i style="background:#16a085"></i>Kimi</span>
+        <span class="prov"><i style="background:#615ced"></i>通义千问</span>
+        <span class="prov"><i style="background:#3859ff"></i>智谱 GLM</span>
+        <span class="prov"><i style="background:#10a37f"></i>OpenAI</span>
+        <span class="prov"><i style="background:#d97757"></i>Anthropic</span>
+        <span class="prov"><i style="background:#4285f4"></i>Google Gemini</span>
+        <span class="prov"><i style="background:#71717a"></i>Ollama（本地）</span>
+        <span class="prov prov--more">+ 自定义服务</span>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>服务器部署</h3><p>在 Linux 服务器上构建并启动 Node 服务，nginx 提供 HTTPS 反代。</p></div>
+        <div class="step"><h3>接入模型</h3><p>选一个服务商，填上你的 API 密钥，挑一个要用的模型。</p></div>
+        <div class="step"><h3>开始对话</h3><p>选个角色开聊；想让它动手，就挂载一个文件夹。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 使用须知 -->
+  <section id="notice" style="padding-top:0">
+    <div class="wrap">
+      <span class="eyebrow">BEFORE YOU START</span>
+      <h2>用之前要知道的</h2>
+      <p class="sec-lead">Deva 追求「说了就做」，所以有几件事请先了解。</p>
+      <div class="notice">
+        <div class="tip tip--warn">
+          <h3><svg class="i"><use href="#i-alert"/></svg>动手前不会逐个询问</h3>
+          <p>读写文件、跑命令都直接执行，不弹授权框。重要的项目建议用 Git 管着，或者先备份。</p>
+        </div>
+        <div class="tip">
+          <h3><svg class="i"><use href="#i-lock"/></svg>数据都在本机</h3>
+          <p>设置、对话、记忆、任务都放在 <code>~/.deva</code>，API 密钥加密保存。用 IM 机器人时，手机上的对话会经过对应平台。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 部署 -->
+  <section id="deploy" class="download">
+    <div class="wrap">
+      <span class="eyebrow">SELF-HOSTED</span>
+      <h2>部署 Deva</h2>
+      <p class="sec-lead">免费、开源。Deva Web 运行在自己的服务器上：单个 Node 进程 + 浏览器访问，nginx 提供 HTTPS。</p>
+      <div class="dl">
+        <div class="os">
+          <h3><svg class="i"><use href="#i-gh"/></svg>最小部署</h3>
+          <pre style="text-align:left;overflow:auto"><code>git clone https://github.com/sqfcyily/deva.git
+cd deva && pnpm install --frozen-lockfile && pnpm build
+export DEVA_HOME=/var/lib/deva
+export DEVA_WEB_TOKEN="$(openssl rand -hex 32)"
+export DEVA_WEB_ORIGIN=https://deva.example.com
+node apps/web/out/server/index.cjs   # 监听 127.0.0.1:7421</code></pre>
+        </div>
+      </div>
+      <div class="dl__cta">
+        <a class="btn btn--primary" href="./deploy-web.md">完整部署文档（systemd / nginx / TLS / 备份回退）</a>
+        <a class="btn" href="./migration-web.md">从旧桌面版迁移</a>
+        <a class="btn" href="https://github.com/sqfcyily/deva/releases"><svg class="i"><use href="#i-gh"/></svg>版本发布</a>
+      </div>
+      <details>
+        <summary>需要什么环境？</summary>
+        <ul>
+          <li><b>服务器</b>：Linux x64、Node.js 22、Git 与可用 shell；PTY 原生构建需 python3 / make / g++。</li>
+          <li><b>访问</b>：一个指向服务器的域名 + TLS 证书（certbot webroot）；Node 只监听回环，公网入口只有 nginx。</li>
+          <li><b>鉴权</b>：所有环境必须配置访问令牌 <code>DEVA_WEB_TOKEN</code>（含本机回环上游）；登录会话、CSRF 与限流由应用内置。</li>
+          <li><b>数据</b>：全部保存在 <code>DEVA_HOME</code>（默认 <code>~/.deva</code>）；备份需连同主密钥 <code>secret.key</code>。</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><svg><use href="#logo"/></svg>Deva</a>
+    <span>MIT License · © 2026 sqfcy</span>
+    <nav>
+      <a href="https://github.com/sqfcyily/deva">GitHub</a>
+      <a href="https://github.com/sqfcyily/deva/releases">Releases</a>
+      <a href="https://github.com/sqfcyily/deva/blob/main/README.en.md">English</a>
+      <a href="https://linux.do">LINUX DO 社区</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  // 深浅色：按钮在两者间切换并记住；没手动选过时跟随系统变化。整页与演示界面都只用 token 取色，切换即一起跟着变
+  ;(() => {
+    const root = document.documentElement
+    const btn = document.querySelector('.theme-btn')
+    const sys = matchMedia('(prefers-color-scheme: dark)')
+    const label = () => {
+      const t = root.dataset.theme === 'dark' ? '切换浅色模式' : '切换深色模式'
+      btn.title = t
+      btn.setAttribute('aria-label', t)
+    }
+    const apply = (t) => {
+      const set = () => { root.dataset.theme = t; label() }
+      // 支持视图过渡时整页淡入淡出，避免各处颜色一跳
+      if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(set)
+      else set()
+    }
+    btn.addEventListener('click', () => {
+      const t = root.dataset.theme === 'dark' ? 'light' : 'dark'
+      try { localStorage.setItem('deva-site-theme', t) } catch {}
+      apply(t)
+    })
+    sys.addEventListener('change', (e) => {
+      let saved = null
+      try { saved = localStorage.getItem('deva-site-theme') } catch {}
+      if (!saved) apply(e.matches ? 'dark' : 'light')
+    })
+    label()
+  })()
+
+  // 桌面安装包下载脚本已随网页化迁移移除(web-migration-plan.md §11.4):
+  // 官网不再分发桌面安装包,「部署」区改为静态的自托管指引,链接指向 docs/deploy-web.md。
+
+  // 演示：同一个对话分 9 章，区块进入视野后自动播放，每章播完停留片刻进下一章，末章之后从头循环；不接管滚轮，页面照常滚动。
+  // 每章是一段「模拟真实使用」的脚本：输入框打字发送 → 助手思考 → 流式输出 / 工具调用 / 卡片交互。
+  // 跳章时先把之前各章瞬时重建成结束态，再播放目标章（往回则直接呈现目标章结束态）；离开视野或切到后台时停在当前章。
+  ;(() => {
+    const stage = document.getElementById('stage')
+    if (!stage) return
+    const $ = (s) => stage.querySelector(s)
+    const list = $('.chat__list')
+    const scroller = $('.chat__scroll')
+    const overlay = $('.chat__overlay')
+    const input = $('.m-box .ph')
+    const sendBtn = $('.m-tbar .send')
+    const todoBox = $('.m-todo')
+    const wsChip = $('.chat__ws')
+    const rowSub = $('.conv--cur small')
+    const caps = [...stage.querySelectorAll('.cap')]
+    const count = $('.stage__count b')
+    const bar = $('.stage__progress i')
+    const PH = input.textContent
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // ---------- 播放原语 ----------
+    // run：动画批次号，切章即 +1；旧批次的等待醒来发现批次已变就中止。instant：瞬时模式，重建结束态时不等待、不做动画。
+    let run = 0
+    let instant = false
+    const CANCEL = {}
+    const wait = (ms) => {
+      if (instant) return Promise.resolve()
+      const id = run
+      return new Promise((res, rej) => setTimeout(() => (id === run ? res() : rej(CANCEL)), ms))
+    }
+    const h = (html) => {
+      const t = document.createElement('template')
+      t.innerHTML = html.trim()
+      return t.content.firstElementChild
+    }
+    const toBottom = () => { scroller.scrollTop = scroller.scrollHeight }
+    const add = (html, parent = list) => {
+      const el = h(html)
+      if (!instant) el.classList.add('enter')
+      parent.append(el)
+      toBottom()
+      return el
+    }
+    const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls) }
+    const press = async (el) => {
+      if (instant || !el) return
+      restart(el, 'pressed')
+      await wait(380)
+    }
+    const icon = (id, cls = 'i') => `<svg class="${cls}"><use href="#i-${id}"/></svg>`
+    const ok = (txt) => `<span class="badge badge--ok">${icon('check')}${txt}</span>`
+    const RUNNING = '<span class="badge badge--run"><i class="spin"></i>进行中</span>'
+    const fmt = (s) => s.replace(/`([^`]+)`/g, '<code>$1</code>')
+
+    // 在输入框里逐字打出并「发送」
+    async function type(text) {
+      if (instant) return
+      input.classList.add('has-text')
+      for (let i = 1; i <= text.length; i++) {
+        input.textContent = text.slice(0, i)
+        await wait(i < 3 ? 70 : 34)
+      }
+      await wait(260)
+      await press(sendBtn)
+      input.textContent = PH
+      input.classList.remove('has-text')
+    }
+    async function user(text, from) {
+      await type(text)
+      add(`<div class="m-user">${from ? `<small>${from}</small>` : ''}${fmt(text)}</div>`)
+      await wait(300)
+    }
+    async function think(ms = 650) {
+      if (instant) return
+      const el = add('<div class="m-think"><i></i><i></i><i></i></div>')
+      try { await wait(ms) } finally { el.remove() }
+    }
+    // 助手流式输出：先「思考」，再逐字吐出（反引号包裹的片段渲染成行内代码）
+    async function say(text) {
+      await think()
+      const p = add('<div class="m-text"><p></p></div>').firstElementChild
+      if (instant) { p.innerHTML = fmt(text); toBottom(); return }
+      const caret = h('<span class="caret"></span>')
+      p.append(caret)
+      for (const [i, seg] of text.split('`').entries()) {
+        const node = i % 2 ? document.createElement('code') : document.createTextNode('')
+        p.insertBefore(node, caret)
+        for (let k = 2; k < seg.length + 2; k += 2) {
+          node.textContent = seg.slice(0, k)
+          toBottom()
+          await wait(20)
+        }
+      }
+      caret.remove()
+    }
+    async function tool(ic, label, code, result) {
+      const el = add(`<div class="m-tool">${icon(ic)}<span>${label}${code ? ` <code>${code}</code>` : ''}</span>${RUNNING}</div>`)
+      await wait(560)
+      el.lastElementChild.outerHTML = ok(result)
+      await wait(140)
+    }
+    const todo = {
+      show(title, items) {
+        todoBox.innerHTML =
+          `<div class="m-todo__head">${icon('listc')}<b>待办清单</b><span>${title}</span><em>0/${items.length}</em><span class="m-todo__bar"><i></i></span></div>` +
+          `<ul>${items.map((t) => `<li><span class="mk">${icon('check')}</span>${t}</li>`).join('')}</ul>`
+        todoBox.hidden = false
+        if (!instant) restart(todoBox, 'enter')
+      },
+      doing(i) { todoBox.querySelectorAll('li')[i].classList.add('doing') },
+      done(i) {
+        const lis = todoBox.querySelectorAll('li')
+        lis[i].classList.remove('doing')
+        lis[i].classList.add('done')
+        const n = todoBox.querySelectorAll('li.done').length
+        todoBox.querySelector('em').textContent = `${n}/${lis.length}`
+        todoBox.querySelector('.m-todo__bar i').style.width = `${(n / lis.length) * 100}%`
+      }
+    }
+
+    // ---------- 剧本：同一个对话里的 9 章 ----------
+    const SUB = ['等你挂载工作区', '已修好，测试通过', '派出 2 个子代理', '等你回答', '计划已批准', '定时任务已创建', '角色名片已生成', '回到之前…', '来自飞书']
+    const CH = [
+      // 01 挂载工作区
+      async () => {
+        await user('my-app 的登录页点「提交」没反应，帮我看看')
+        await think(500)
+        const card = add(`<div class="m-mount">
+          <div class="m-card__head">${icon('folder')}<b>需要挂载工作区</b><span class="okbadge"></span></div>
+          <div class="m-mount__body">当前对话未挂载工作区，无法确定相对路径的落点：<code>src/pages/Login.tsx</code></div>
+          <div class="m-actions"><span class="mbtn mbtn--p">${icon('folder', 'i sm')}挂载工作区…</span><span class="mbtn">暂不挂载</span></div></div>`)
+        await wait(1000)
+        await press(card.querySelector('.mbtn--p'))
+        card.classList.add('is-ok')
+        card.querySelector('.okbadge').textContent = '已挂载'
+        card.querySelector('.m-mount__body').innerHTML = '已挂载工作区：<code>D:\\work\\my-app</code>'
+        card.querySelector('.m-actions').remove()
+        wsChip.hidden = false
+        if (!instant) restart(wsChip, 'pop')
+        await wait(300)
+      },
+      // 02 动手干活 + 待办清单
+      async () => {
+        todo.show('修复登录提交', ['定位「提交」的处理函数', '找出页面刷新的原因', '修复表单默认提交', '运行登录相关测试'])
+        await wait(350)
+        todo.doing(0); await tool('search', '搜索', 'handleSubmit', '3 处'); todo.done(0)
+        todo.doing(1); await tool('file', '读取', 'src/pages/Login.tsx', '完成'); todo.done(1)
+        todo.doing(2); await tool('edit', '编辑', 'src/pages/Login.tsx', '+4 −1'); todo.done(2)
+        todo.doing(3); await tool('term', '运行', 'pnpm test login', '12 项通过'); todo.done(3)
+        await say('找到了：表单的 `onSubmit` 没有阻止默认提交，点一下页面就直接刷新了。已经补上 `preventDefault()`，登录相关的 12 个测试全部通过。')
+        await wait(400)
+        todoBox.hidden = true
+        add(`<div class="m-done">${icon('listc')}<span>已完成清单 · <b>修复登录提交</b></span><span class="m-done__n">4 项</span>${ok('已完成')}</div>`)
+      },
+      // 03 子代理并行
+      async () => {
+        await user('再给整个应用加上暗色模式')
+        await say('改动范围比较大，我先派两个子代理并行摸清现状：')
+        const sub = (title) => add(`<div class="m-sub"><div class="m-sub__head">${icon('flow')}<b>Explore</b><span>${title}</span>${RUNNING}</div><div class="m-sub__steps"></div></div>`)
+        const line = (el, txt) => { el.querySelector('.m-sub__steps').insertAdjacentHTML('beforeend', `<span>${txt}</span>`); toBottom() }
+        const fin = (el) => { el.querySelector('.badge').outerHTML = ok('已完成') }
+        const a = sub('梳理各组件里写死的颜色')
+        await wait(250)
+        const b = sub('检查组件库的主题支持')
+        await wait(450); line(a, '搜索十六进制色值 · 读取 src/components/**')
+        await wait(350); line(b, '读取 package.json · 查阅组件库主题文档')
+        await wait(650); fin(b)
+        await wait(450); line(a, '已检查 64 个文件，颜色散落在 23 个组件里')
+        await wait(500); fin(a)
+        await say('两边都回来了：颜色写死在 23 个组件里，组件库本身支持主题变量，改造成本可控。')
+      },
+      // 04 提问卡
+      async () => {
+        const card = add(`<div class="m-askc">
+          <div class="m-card__head">${icon('ask')}<b>请你决定</b></div>
+          <div class="m-askc__q">暗色模式默认怎么生效？</div>
+          <div class="m-askc__opts">
+            <span class="opt"><i></i>跟随系统，设置里可以切换<em>推荐</em></span>
+            <span class="opt"><i></i>默认浅色，手动开启</span>
+            <span class="opt"><i></i>默认深色</span>
+            <span class="opt opt--own"><i></i>自己输入…</span>
+          </div>
+          <div class="m-actions end"><span class="mbtn mbtn--p">提交</span></div></div>`)
+        await wait(1100)
+        const opt = card.querySelector('.opt')
+        opt.classList.add('is-on')
+        await press(opt)
+        await wait(350)
+        await press(card.querySelector('.mbtn--p'))
+        const done = h(`<div class="m-ask">${icon('chev')}${icon('ask')}<b>请你决定</b><span>跟随系统，设置里可以切换</span>${ok('已回答')}</div>`)
+        if (!instant) done.classList.add('enter')
+        card.replaceWith(done)
+        toBottom()
+        await wait(250)
+      },
+      // 05 计划批准
+      async () => {
+        await say('计划如下，你确认后我再动手：')
+        const card = add(`<div class="m-card m-plan">
+          <div class="m-card__head">${icon('plan')}<b>待批准的计划</b><span class="m-plan__sum">把颜色抽成主题变量，新增暗色主题并默认跟随系统…</span><span class="okbadge"></span></div>
+          <ol><li>把颜色抽成主题变量，集中到 <code>theme.css</code></li><li>新增暗色主题，默认跟随系统</li><li>设置页加「浅色 / 深色 / 跟随系统」切换</li><li>补两种主题下的截图测试</li></ol>
+          <div class="m-actions"><span class="mbtn mbtn--p">${icon('check', 'i sm')}批准并执行</span><span class="mbtn">继续完善</span></div></div>`)
+        await wait(1200)
+        await press(card.querySelector('.mbtn--p'))
+        card.classList.add('is-ok')
+        card.querySelector('.okbadge').textContent = '已批准'
+        card.querySelector('.m-actions').remove()
+        await wait(300)
+        await tool('edit', '新建', 'src/styles/theme.css', '+86')
+        await tool('edit', '编辑 23 个组件的颜色引用', '', '完成')
+        await tool('term', '运行', 'pnpm test:visual', '通过')
+        await say('暗色模式加好了：默认跟随系统，设置页可以手动切换。')
+      },
+      // 06 定时任务
+      async () => {
+        await user('以后每天早上 9 点，把前一天的提交整理成日报')
+        await say('好的，核对一下时间和指令，点「创建」就建好了：')
+        const card = add(`<div class="m-card m-task">${icon('cal')}
+          <div class="m-task__body"><b>my-app 提交日报</b><small>每天 09:00 · 下次 明天 09:00 · Deva · deepseek-chat</small><span>汇总 my-app 前一天的提交，按「新功能 / 修复 / 其他」分类写成日报</span></div>
+          <div class="m-actions"><span class="mbtn mbtn--ghost">编辑</span><span class="mbtn">忽略</span><span class="mbtn mbtn--p">✓ 创建</span></div></div>`)
+        await wait(1200)
+        await press(card.querySelector('.mbtn--p'))
+        const done = h(`<div class="m-taskdone">${icon('cal')}<span><b>${icon('check', 'i sm')}已创建『my-app 提交日报』</b><small>每天 09:00 · 下次 明天 09:00</small></span><span class="mbtn">打开任务会话</span></div>`)
+        if (!instant) done.classList.add('enter')
+        card.replaceWith(done)
+        toBottom()
+      },
+      // 07 新建角色
+      async () => {
+        await user('再帮我建一个写周报的角色，语气正式一点')
+        await say('拟好了，点开名片可以再微调，确认后就建好：')
+        const card = add(`<div class="m-agent"><span class="ava ava--wk">周</span><span class="m-agent__body"><small>角色名片</small><b>周报助手</b><span>语气正式、条理清晰，擅长把零散的工作记录整理成周报</span></span><span class="m-agent__hint">点击查看并创建 ›</span></div>`)
+        await wait(1200)
+        await press(card)
+        card.classList.add('is-ok')
+        card.querySelector('.m-agent__hint').innerHTML = `${icon('check', 'i sm')}已创建`
+      },
+      // 08 回退
+      async () => {
+        await type('/rewind')
+        add('<div class="m-dim"></div>', overlay)
+        const modal = add(`<div class="m-modal">
+          <div class="m-modal__head">${icon('undo')}<b>回到之前</b><kbd>/rewind</kbd></div>
+          <div class="m-turn"><i>#4</i><span class="t">再帮我建一个写周报的角色</span><span>无文件改动</span></div>
+          <div class="m-turn"><i>#3</i><span class="t">以后每天早上 9 点，把前一天的提交整理成日报</span><span>无文件改动</span></div>
+          <div class="m-turn"><i>#2</i><span class="t">再给整个应用加上暗色模式</span><span><span class="add">+214</span> <span class="del">−96</span></span></div>
+          <div class="m-turn"><i>#1</i><span class="t">my-app 的登录页点「提交」没反应，帮我看看</span><span><span class="add">+4</span> <span class="del">−1</span></span></div>
+          <div class="m-modes"><span class="is-on">恢复代码和对话</span><span>仅恢复代码</span><span>仅恢复对话</span></div>
+          <div class="m-actions end"><span class="mbtn">取消</span><span class="mbtn mbtn--p">回退</span></div></div>`, overlay)
+        const turns = modal.querySelectorAll('.m-turn')
+        turns[0].classList.add('is-sel')
+        for (const k of [1, 2]) {
+          await wait(500)
+          turns[k - 1].classList.remove('is-sel')
+          turns[k].classList.add('is-sel')
+        }
+        await wait(300)
+      },
+      // 09 第二天早上：定时任务跑完弹通知，人在外面用手机接着聊
+      async () => {
+        await press(overlay.querySelector('.m-modal .mbtn:not(.mbtn--p)'))
+        overlay.innerHTML = ''
+        const note = add(`<div class="m-notify"><svg><use href="#logo"/></svg><div><b>定时任务完成 · my-app 提交日报</b><small>昨天 6 次提交：新功能 2、修复 3、其他 1</small></div></div>`, overlay)
+        await wait(1500)
+        if (!instant) { note.classList.add('leave'); await wait(300) }
+        note.remove()
+        stage.classList.add('phone-on')
+        const phone = add(`<div class="m-phone"><div class="m-phone__top"><b>Deva</b><small>飞书 · 机器人</small></div><div class="m-phone__msgs"></div><div class="m-phone__input"><span class="pin">发消息…</span></div></div>`, overlay)
+        const pmsgs = phone.querySelector('.m-phone__msgs')
+        const pin = phone.querySelector('.pin')
+        const q = '今天的日报发我看看'
+        const reply = '昨天共 6 次提交：新功能 2（暗色模式、主题切换）、修复 3（含登录提交）、其他 1。完整日报在任务会话里。'
+        await wait(600)
+        if (!instant) {
+          pin.classList.add('has-text')
+          for (let i = 1; i <= q.length; i++) { pin.textContent = q.slice(0, i); await wait(70) }
+          await wait(250)
+          pin.textContent = '发消息…'
+          pin.classList.remove('has-text')
+        }
+        add(`<div class="pm pm--me">${q}</div>`, pmsgs)
+        await wait(350)
+        add(`<div class="m-user"><small>来自飞书</small>${q}</div>`)
+        await say(reply)
+        add(`<div class="pm">${fmt(reply)}</div>`, pmsgs)
+      }
+    ]
+    const n = CH.length
+
+    // ---------- 章节切换 ----------
+    const reset = () => {
+      list.innerHTML = ''
+      overlay.innerHTML = ''
+      todoBox.hidden = true
+      wsChip.hidden = true
+      stage.classList.remove('phone-on')
+      input.textContent = PH
+      input.classList.remove('has-text')
+    }
+    // 瞬时重建 0..k 各章的结束态（k = -1 即清空）
+    async function build(k) {
+      instant = true
+      reset()
+      try { for (let i = 0; i <= k; i++) await CH[i]() } finally { instant = false }
+    }
+    async function play(k) {
+      try { await CH[k]() } catch (e) { if (e !== CANCEL) throw e }
+    }
+    // 说明条横向切入：往前从右侧进、往回从左侧进，旧的反向滑出
+    function caption(k, dir) {
+      caps.forEach((c, i) => {
+        if (i === k) {
+          if (!reduce) {
+            c.style.transition = 'none'
+            c.style.transform = `translateX(${dir * 70}px)`
+            c.style.opacity = '0'
+            void c.offsetWidth
+            c.style.transition = c.style.transform = c.style.opacity = ''
+          }
+          c.classList.remove('is-out')
+          c.classList.add('is-on')
+        } else if (c.classList.contains('is-on')) {
+          c.classList.remove('is-on')
+          c.style.setProperty('--out', `${-dir * 70}px`)
+          c.classList.add('is-out')
+          setTimeout(() => c.classList.remove('is-out'), 500)
+        }
+      })
+      count.textContent = String(k + 1)
+      bar.style.width = `${((k + 1) / n) * 100}%`
+    }
+
+    let shown = -1
+    // dir：1 往前（播放该章）/ -1 往回（直接呈现该章结束态）；返回该章播完（或被打断）时落定的 Promise
+    function show(k, dir) {
+      run++ // 作废进行中的动画
+      shown = k
+      caption(k, dir)
+      rowSub.textContent = SUB[k]
+      restart(rowSub, 'swap')
+      if (dir < 0) {
+        return build(k).then(() => { list.animate?.([{ opacity: 0.35 }, { opacity: 1 }], { duration: 260 }) })
+      }
+      return build(k - 1).then(() => (reduce ? build(k) : play(k)))
+    }
+
+    // ---------- 自动播放 ----------
+    // 每章播完停留 HOLD 再进下一章；只在区块可见、页面在前台时推进
+    const HOLD = 2800
+    let timer = 0
+    let ended = false // 当前章已播完，等着进下一章
+    let visible = false
+    const schedule = () => {
+      clearTimeout(timer)
+      if (ended && visible && !document.hidden) timer = setTimeout(() => go(shown + 1, 1), HOLD)
+    }
+    function go(k, dir) {
+      clearTimeout(timer)
+      ended = false
+      const done = show((k + n) % n, dir)
+      const id = run
+      done.then(() => { if (id === run) { ended = true; schedule() } })
+    }
+    $('.stage__nav--prev').addEventListener('click', () => go((shown > 0 ? shown : n) - 1, -1))
+    $('.stage__nav--next').addEventListener('click', () => go(shown + 1, 1))
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting
+      if (visible && shown < 0) go(0, 1)
+      else schedule()
+    }, { threshold: 0.4 }).observe(stage)
+    document.addEventListener('visibilitychange', schedule)
+  })()
+</script>
+</body>
+</html>

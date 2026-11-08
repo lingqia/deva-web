@@ -1,0 +1,72 @@
+# PR 与推到 main 时做类型检查 + 自动测试 + 构建 + 真实 HTTP/WS/PTY 冒烟(web-migration-plan.md §11.4)。
+# 使用临时 DEVA_HOME,不读取任何真实用户数据。发版由 release.yml 负责。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# 同一 PR 连续推送时取消上一次未跑完的检查
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm build
+
+      # 真实 HTTP/WS 冒烟:临时数据目录 + 一次性 token,启动后验证 health/ready/login/invoke。
+      - name: Smoke (HTTP + auth)
+        env:
+          CI_SMOKE: '1'
+        run: |
+          export DEVA_HOME="$RUNNER_TEMP/deva-smoke-home"
+          mkdir -p "$DEVA_HOME"
+          export DEVA_WEB_TOKEN="$(openssl rand -hex 32)"
+          export DEVA_WEB_ORIGIN="http://127.0.0.1:7421"
+          export DEVA_WEB_HOST="127.0.0.1"
+          export DEVA_WEB_PORT="7421"
+          node apps/web/out/server/index.cjs &
+          SRV=$!
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:7421/api/health && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:7421/api/ready
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7421/api/config)
+          [ "$code" = "401" ] || { echo "未登录访问 config 应 401,实际 $code"; exit 1; }
+          curl -sf -X POST http://127.0.0.1:7421/api/login \
+            -H 'Content-Type: application/json' -H 'X-Deva-Client: 1' \
+            -H 'Origin: http://127.0.0.1:7421' \
+            -c "$RUNNER_TEMP/cookies.txt" \
+            -d "{\"token\":\"$DEVA_WEB_TOKEN\"}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7421/api/config \
+            -b "$RUNNER_TEMP/cookies.txt")
+          [ "$code" = "200" ] || { echo "登录后 config 应 200,实际 $code"; exit 1; }
+          kill $SRV
+
+      # PTY 冒烟:@lydell/node-pty 在 Linux 需可加载的原生模块,直接 spawn 验证。
+      - name: Smoke (PTY)
+        run: |
+          node -e "const pty=require('./apps/web/node_modules/@lydell/node-pty');const p=pty.spawn('bash',['-c','echo pty-ok'],{name:'xterm-256color',cols:80,rows:24,cwd:process.env.RUNNER_TEMP});let out='';p.onData(d=>out+=d);p.onExit(()=>{if(!out.includes('pty-ok')){console.error('PTY 输出异常:',out);process.exit(1)}console.log('pty-ok')})"

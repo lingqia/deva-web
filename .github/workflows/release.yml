@@ -1,0 +1,56 @@
+# Web 版发布:v* tag → 干净 Linux 构建 + 可部署归档(web-migration-plan.md §11.4)。
+# 归档含构建产物、依赖安装元数据(package/lock/workspace/.npmrc)、部署/迁移文档与 deploy 模板。
+# 注意:首次真实发布前,先在干净 Linux 按归档内 INSTALL.txt 验证生产依赖安装与启动(验证记录见
+# docs/validation/web-migration.md);桌面安装包/latest.yml/blockmap 链路已整体移除。
+name: Release (web)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  web-archive:
+    name: web release archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 校验 tag 与 apps/web/package.json 版本一致
+        if: github.event_name == 'push'
+        run: |
+          PKG_VERSION=$(node -p "require('./apps/web/package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$PKG_VERSION" ]; then
+            echo "tag $GITHUB_REF_NAME 与 apps/web/package.json 版本 v$PKG_VERSION 不一致"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck && pnpm test && pnpm build
+
+      - name: 打发布归档
+        run: node apps/web/scripts/release-archive.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deva-web-archive
+          path: release/deva-web-v*.tar.gz
+
+      - name: 上传到 Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/deva-web-v*.tar.gz
+          generate_release_notes: true
