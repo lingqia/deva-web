@@ -50,17 +50,26 @@ export class InvokeError extends Error {
 export const channelSchemas = new Map<string, ZodTypeAny>()
 {
   const configKey = z.string().min(1).max(128)
-  channelSchemas.set(
-    'config:set',
-    z.tuple([
-      // cleanPatch:顶层键 ≤256,键长 ≤128(JSON 值由 body 解析天然保证)
-      z
-        .record(configKey, z.unknown())
-        .refine((p) => Object.keys(p).length <= 256, 'config patch 键数量超限(≤256)'),
-      // unsetKeys:显式删除顶层键,≤64
-      z.array(configKey).max(64).optional()
-    ])
-  )
+  // config:set 的 args 有三种合法形态：
+  //   [cleanPatch]               —— 渲染层 config.set(patch)（unsetKeys 为 undefined，JSON 序列化后可能是缺省）
+  //   [cleanPatch, null]         —— JSON.stringify([patch, undefined]) 的产物（数组里的 undefined 变 null）
+  //   [cleanPatch, unsetKeys]    —— 显式删键
+  // 早期只写了 z.tuple([patch, array.optional()])，对 null 与缺省形态都判 400（历史 bug，曾被
+  // 参数深度校验挡在前面未暴露）。此处统一放行三种形态。
+  {
+    const patchSchema = z
+      .record(configKey, z.unknown())
+      .refine((p) => Object.keys(p).length <= 256, 'config patch 键数量超限(≤256)')
+    const unsetSchema = z.array(configKey).max(64)
+    channelSchemas.set(
+      'config:set',
+      z.union([
+        z.tuple([patchSchema, unsetSchema]),
+        z.tuple([patchSchema, z.null()]),
+        z.tuple([patchSchema])
+      ])
+    )
+  }
   channelSchemas.set('config:get', z.tuple([]))
 
   // ── 通用形 ──
@@ -254,12 +263,12 @@ const sideEffectDedup = new SideEffectDedup()
 // ── 通用参数守卫(P4,先于逐通道 schema):形状上限对所有通道一致 ──
 const MAX_ARGS_COUNT = 16
 const MAX_ARG_STRING_BYTES = 1024 * 1024
-const MAX_ARG_DEPTH = 4
+const MAX_ARG_DEPTH = 8
 
 /**
  * 形状守卫:args 数量 ≤16;单参字符串(含嵌套)≤1MiB —— 上传通道(attachments:upload /
  * skills:import-web)豁免字符串限额,其内容上限由 body 40MiB + 业务层解码后字节判定;
- * 对象/数组嵌套深度 ≤4(数组算一层)。JSON 已解析(无环),逐节点行走线性成本。
+ * 对象/数组嵌套深度 ≤8(数组算一层)。JSON 已解析(无环),逐节点行走线性成本。
  * 返回错误文案或 null。
  */
 function checkArgsShape(channel: string, args: unknown[]): string | null {
@@ -271,7 +280,7 @@ function checkArgsShape(channel: string, args: unknown[]): string | null {
       return null
     }
     if (v === null || typeof v !== 'object') return null
-    if (depth >= MAX_ARG_DEPTH) return '参数嵌套深度超限(≤4 层)'
+    if (depth >= MAX_ARG_DEPTH) return '参数嵌套深度超限(≤8 层)'
     if (Array.isArray(v)) {
       for (const item of v) {
         const e = walk(item, depth + 1)

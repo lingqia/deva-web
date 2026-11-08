@@ -3566,6 +3566,9 @@ button.tl__line:hover {
   font-weight: 600;
   color: var(--success);
 }
+.key-status--error {
+  color: var(--danger, #e5484d);
+}
 .field__warn {
   margin-top: var(--space-2);
   font-size: 12px;

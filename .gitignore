@@ -35,3 +35,10 @@ design/
 
 # Release archives
 release/
+
+# 本机运行数据 / 凭据（严禁入库）
+deva-home/
+deva-web.env
+deva-web.pid
+start-deva.sh
+.probe-tmp/

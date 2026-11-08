@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode
+} from 'react'
 import { seedProviders, type Provider, type ModelDef, type ProviderPurpose } from '../mock/models'
 import type { EffortLevel } from '@shared/api'
 
@@ -127,6 +135,9 @@ export function ModelsProvider({ children }: { children: ReactNode }): React.JSX
 
   // 配置载入完成前不回写，避免用默认种子覆盖已存 ~/.deva/config.json
   const [hydrated, setHydrated] = useState(false)
+  // 载入失败时跳过紧接着的那一次回写（见下方保存 effect）：否则会拿默认种子把用户已存的
+  // models 段整段冲掉（静默丢配置，只在刷新后才能发现）。
+  const skipNextWriteRef = useRef(false)
 
   useEffect(() => {
     let alive = true
@@ -179,7 +190,8 @@ export function ModelsProvider({ children }: { children: ReactNode }): React.JSX
           setActiveModelId(typeof saved.activeModelId === 'string' ? saved.activeModelId : null)
         if (saved?.activeEffort) setActiveEffort(saved.activeEffort)
       } catch {
-        /* 无配置 / 读取失败：沿用默认种子 */
+        /* 无配置 / 读取失败：沿用默认种子；但标记跳过下一次回写，避免用默认种子覆盖已存配置 */
+        skipNextWriteRef.current = true
       } finally {
         if (alive) setHydrated(true)
       }
@@ -192,8 +204,16 @@ export function ModelsProvider({ children }: { children: ReactNode }): React.JSX
   // 变更后回写（仅在 hydrate 之后）。密钥不在此列——始终只在主进程加密存储。
   useEffect(() => {
     if (!hydrated) return
+    if (skipNextWriteRef.current) {
+      // 载入失败后的第一次触发只是「默认种子」的回显，不是用户改动：跳过，后续改动照常保存。
+      skipNextWriteRef.current = false
+      return
+    }
     // models 段整块替换（config:set 只做顶层浅合并），新增的兄弟字段必须一并写，漏写即被清掉。
-    void window.deva.config.set({ models: { providers, activeModelId, activeEffort } })
+    void window.deva.config.set({ models: { providers, activeModelId, activeEffort } }).catch((err: unknown) => {
+      // 保存失败必须可见（至少进控制台）：此前 void 吞掉，用户无从知道配置没存上
+      console.warn('[models] 模型配置保存失败', err)
+    })
   }, [hydrated, providers, activeModelId, activeEffort])
 
   const patchProvider = (id: string, fn: (p: Provider) => Provider): void =>

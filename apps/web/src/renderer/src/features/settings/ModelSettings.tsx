@@ -72,7 +72,7 @@ export function ModelSettings(): React.JSX.Element {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [keyDraft, setKeyDraft] = useState('')
   // 密钥自动保存的状态指示（替代原「保存」按钮的反馈）
-  const [keySaveState, setKeySaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [keySaveState, setKeySaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   // 输入防抖计时器：边打字边落盘，失焦/回车时立即冲刷
   const keyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [nameDraft, setNameDraft] = useState('')
@@ -322,8 +322,13 @@ export function ModelSettings(): React.JSX.Element {
     const key = value.trim()
     if (!key) return
     setKeySaveState('saving')
-    const res = await setApiKey(providerId, key)
-    setKeySaveState(res.ok ? 'saved' : 'idle')
+    try {
+      const res = await setApiKey(providerId, key)
+      setKeySaveState(res.ok ? 'saved' : 'error')
+    } catch {
+      // 保存失败必须告诉用户；此前静默回 'idle'，界面毫无提示，容易误以为已保存
+      setKeySaveState('error')
+    }
   }
 
   // 输入变化：更新草稿并防抖自动保存（~600ms）
@@ -507,6 +512,8 @@ export function ModelSettings(): React.JSX.Element {
               {t('models.apiKey')}
               {keySaveState === 'saving' ? (
                 <span className="key-status">{t('models.keySaving')}</span>
+              ) : keySaveState === 'error' ? (
+                <span className="key-status key-status--error">⚠ {t('models.keySaveFailed')}</span>
               ) : keySaveState === 'saved' ? (
                 <span className="key-status">
                   <ShieldCheck size={12} />
