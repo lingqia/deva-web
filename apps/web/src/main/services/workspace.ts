@@ -1,6 +1,8 @@
 import { dialog, ipcMain, shell, type PlatformWindow } from '../platform'
 import { promises as fs, realpathSync, statSync } from 'fs'
 import { basename, dirname, isAbsolute, join, resolve } from 'path'
+import { homedir } from 'os'
+import { InvokeError } from '../../server/registry'
 import { assertInside, isInsideRoot, trustRoot } from './fs-guard'
 import { listSessions } from './chat-store'
 
@@ -117,7 +119,12 @@ export interface BrowseResult {
   nextCursor?: string
 }
 
-export type BrowseFailure = { ok: false; reason: string }
+/**
+ * 浏览/登记失败不再以 `{ok:false, reason}` 结果体返回,改为抛 `InvokeError`
+ * （与 src/server/files.ts 同规），由 registry 映射为稳定的错误码/HTTP 状态。
+ * 历史原因：早先返回结果体时,客户端桥只看 HTTP ok 就 resolve,渲染层把失败
+ * 当成「空目录」渲染（WebFolderPicker 曾因此一直显示「此目录为空」）。
+ */
 
 /** 游标 = 已取条目数（十进制串）。非法/越界一律按 0 处理（目录内容在页间变化时可重取）。 */
 function parseBrowseCursor(cursor: unknown): number {
@@ -140,36 +147,36 @@ function listDrives(): DirEntry[] {
   return out
 }
 
-/** 校验浏览目标：非空绝对路径、无 NUL、长度受限;返回 resolve 后的绝对路径,失败回 null（reason 已定）。 */
-function validateBrowsePath(raw: unknown): { path: string } | { reason: string } {
-  if (typeof raw !== 'string' || raw.length === 0) return { reason: '缺少 path' }
-  if (raw.includes('\0')) return { reason: '路径含非法字符' }
-  if (raw.length > 4096) return { reason: '路径过长' }
+/** 校验浏览目标：非空绝对路径、无 NUL、长度受限;返回 resolve 后的绝对路径,非法即抛 InvokeError。 */
+function validateBrowsePath(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0) throw new InvokeError('INVALID_ARGUMENT', '缺少 path')
+  if (raw.includes('\0')) throw new InvokeError('INVALID_ARGUMENT', '路径含非法字符')
+  if (raw.length > 4096) throw new InvokeError('INVALID_ARGUMENT', '路径过长')
   // 相对输入（含盘符相对 C:foo）直接拒绝（§5.4:不以 cwd 暗示基准）。UNC(\\server\share)与
   // 盘符绝对路径都放行;必须先于 resolve 判定 —— resolve 的产物恒为绝对路径,判产物会漏掉。
-  if (!isAbsolute(raw)) return { reason: '需要绝对路径' }
-  return { path: resolve(raw) }
+  if (!isAbsolute(raw)) throw new InvokeError('INVALID_ARGUMENT', '需要绝对路径')
+  return resolve(raw)
 }
 
-async function browseDir(abs: string, cursor: unknown): Promise<BrowseResult | BrowseFailure> {
+async function browseDir(abs: string, cursor: unknown): Promise<BrowseResult> {
   // realpath 闭合符号链接（§5.4:读取目标 realpath 失败时拒绝,不静默退回字符串前缀）
   let real: string
   try {
     real = await fs.realpath(abs)
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
-    if (code === 'ENOENT') return { ok: false, reason: '目录不存在' }
-    if (code === 'EACCES' || code === 'EPERM') return { ok: false, reason: '无权访问该路径' }
-    return { ok: false, reason: '路径无法解析' }
+    if (code === 'ENOENT') throw new InvokeError('NOT_FOUND', '目录不存在')
+    if (code === 'EACCES' || code === 'EPERM') throw new InvokeError('FORBIDDEN', '无权访问该路径')
+    throw new InvokeError('INVALID_ARGUMENT', '路径无法解析')
   }
   const st = await fs.stat(real).catch(() => null)
-  if (!st?.isDirectory()) return { ok: false, reason: '目标不是目录' }
+  if (!st?.isDirectory()) throw new InvokeError('INVALID_ARGUMENT', '目标不是目录')
   const read = await fs.readdir(real, { withFileTypes: true }).catch((err) => {
     const code = (err as NodeJS.ErrnoException).code
     return code === 'EACCES' || code === 'EPERM' ? 'denied' : 'failed'
   })
-  if (read === 'denied') return { ok: false, reason: '无权读取该目录' }
-  if (read === 'failed') return { ok: false, reason: '目录读取失败' }
+  if (read === 'denied') throw new InvokeError('FORBIDDEN', '无权读取该目录')
+  if (read === 'failed') throw new InvokeError('INTERNAL', '目录读取失败')
   const dirents = read
   // 与 fs:read-dir 同形：只留目录/文件,目录在前、按名称排序;不递归。
   const entries: DirEntry[] = dirents
@@ -226,14 +233,16 @@ export function registerWebWorkspaceIpc(): void {
   // 其余平台从主目录/根开始导航由前端给定。parent 由服务器计算,支持正常向上导航。
   ipcMain.handle(
     'fs:browse',
-    async (_e, q?: { path?: string; cursor?: string }): Promise<BrowseResult | BrowseFailure> => {
+    async (_e, q?: { path?: string; cursor?: string }): Promise<BrowseResult> => {
       // Windows:path 缺省/空 = 「我的电脑」盘符列表（current/parent 均无）。
       if (process.platform === 'win32' && (typeof q?.path !== 'string' || q.path.length === 0)) {
         return { ok: true, current: null, parent: null, entries: listDrives() }
       }
-      const v = validateBrowsePath(q?.path)
-      if ('reason' in v) return { ok: false, reason: v.reason }
-      return browseDir(v.path, q?.cursor)
+      // 其余平台：path 缺省/空 = 服务端主目录。WebFolderPicker 打开即无参浏览一次
+      //（见其 load()），早期这里没有默认值，直接返回「缺少 path」的失败体，
+      // 渲染层又把失败当成空目录，于是「挂载工作区」永远只显示「此目录为空」。
+      const raw = typeof q?.path === 'string' && q.path.length > 0 ? q.path : homedir() || '/'
+      return browseDir(validateBrowsePath(raw), q?.cursor)
     }
   )
 
@@ -241,20 +250,19 @@ export function registerWebWorkspaceIpc(): void {
   // 登记的是 realpath（与 isInsideRoot 的真实路径比较同源,堵「链接在根内、目标在根外」）。
   ipcMain.handle(
     'fs:trust-root',
-    async (_e, q?: { path?: string }): Promise<{ ok: true; path: string; name: string } | BrowseFailure> => {
-      const v = validateBrowsePath(q?.path)
-      if ('reason' in v) return { ok: false, reason: v.reason }
+    async (_e, q?: { path?: string }): Promise<{ ok: true; path: string; name: string }> => {
+      const abs = validateBrowsePath(q?.path)
       let real: string
       try {
-        real = await fs.realpath(v.path)
+        real = await fs.realpath(abs)
       } catch (err) {
         const code = (err as NodeJS.ErrnoException).code
-        if (code === 'ENOENT') return { ok: false, reason: '目录不存在' }
-        if (code === 'EACCES' || code === 'EPERM') return { ok: false, reason: '无权访问该路径' }
-        return { ok: false, reason: '路径无法解析' }
+        if (code === 'ENOENT') throw new InvokeError('NOT_FOUND', '目录不存在')
+        if (code === 'EACCES' || code === 'EPERM') throw new InvokeError('FORBIDDEN', '无权访问该路径')
+        throw new InvokeError('INVALID_ARGUMENT', '路径无法解析')
       }
       const st = await fs.stat(real).catch(() => null)
-      if (!st?.isDirectory()) return { ok: false, reason: '目标不是目录' }
+      if (!st?.isDirectory()) throw new InvokeError('INVALID_ARGUMENT', '目标不是目录')
       trustRoot(real)
       return { ok: true, path: real, name: basename(real) || real }
     }
