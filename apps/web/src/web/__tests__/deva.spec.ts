@@ -292,3 +292,49 @@ describe('window.deva WS 推送与上行', () => {
     }
   })
 })
+
+describe('fs 通道的 args 形状（与服务端 channelSchemas 对齐）', () => {
+  it('fs:trust-root 收 {path} 对象，不是裸字符串（修前被 schema 判 INVALID_ARGUMENT）', async () => {
+    const { install, fetchMock } = await freshBridge()
+    fetchMock.mockResolvedValue(
+      jsonRes(200, { ok: true, result: { ok: true, path: '/data/free-api', name: 'free-api' }, requestId: 'r' })
+    )
+    const b = install.installDevaBridge()
+    await b.api.fs.trustRoot('/data/free-api')
+    const [, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1] as [string, RequestInit]
+    expect((JSON.parse(String(init.body)) as { args: unknown[] }).args).toEqual([{ path: '/data/free-api' }])
+  })
+
+  it('fs:browse 收 {path?,cursor?}；无参调用也送对象', async () => {
+    const { install, fetchMock } = await freshBridge()
+    fetchMock.mockResolvedValue(
+      jsonRes(200, {
+        ok: true,
+        result: { ok: true, current: '/data/home', parent: '/data', entries: [] },
+        requestId: 'r'
+      })
+    )
+    const b = install.installDevaBridge()
+    await b.api.fs.browse({ path: '/data/free-api' })
+    await b.api.fs.browse()
+    const argsOf = (i: number): unknown[] => {
+      const [, init] = fetchMock.mock.calls[i] as [string, RequestInit]
+      return (JSON.parse(String(init.body)) as { args: unknown[] }).args
+    }
+    expect(argsOf(0)).toEqual([{ path: '/data/free-api' }])
+    expect(argsOf(1)).toEqual([{}])
+  })
+
+  it('openFolder（过渡 prompt 实现）同样走 {path} 形状', async () => {
+    const { install, fetchMock } = await freshBridge()
+    fetchMock.mockResolvedValue(
+      jsonRes(200, { ok: true, result: { ok: true, path: '/data/free-api', name: 'free-api' }, requestId: 'r' })
+    )
+    ;(window as unknown as { prompt: (m: string) => string | null }).prompt = () => '  /data/free-api  '
+    const b = install.installDevaBridge()
+    const r = await b.api.fs.openFolder()
+    expect(r).toEqual({ ok: true, path: '/data/free-api', name: 'free-api' })
+    const [, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1] as [string, RequestInit]
+    expect((JSON.parse(String(init.body)) as { args: unknown[] }).args).toEqual([{ path: '/data/free-api' }])
+  })
+})

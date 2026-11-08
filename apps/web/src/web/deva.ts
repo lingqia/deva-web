@@ -305,7 +305,7 @@ function buildBridge(): DevaBridge {
         if (path === null) return null
         const trimmed = path.trim()
         if (!trimmed) return null
-        return inv<OpenFolderResult>('fs:trust-root', trimmed)
+        return inv<OpenFolderResult>('fs:trust-root', { path: trimmed })
       },
       readDir: (path) => inv<DirEntry[]>('fs:read-dir', path),
       readFile: (path) => inv<ReadFileResult>('fs:read-file', path),
@@ -334,7 +334,9 @@ function buildBridge(): DevaBridge {
         }),
       pickAttachmentsWeb: (files) => inv<PickedAttachment[]>('fs:pick-attachments-web', files),
       browse: (args) => inv<DirBrowseResult>('fs:browse', args ?? {}),
-      trustRoot: (path) => inv<OpenFolderResult>('fs:trust-root', path)
+      // 服务端 channelSchemas/handler 收 {path} 对象；此前这里直传字符串，
+      // 被参数校验判「0: Expected object, received string」，「选择当前目录」永远失败。
+      trustRoot: (path) => inv<OpenFolderResult>('fs:trust-root', { path })
     },
     config: {
       get: async () => {
