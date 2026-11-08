@@ -118,16 +118,21 @@ export function registerConfigIpc(): void {
   // 要删的顶层键改列入 unsetKeys（string[]，≤64 项）。
   ipcMain.handle(
     'config:set',
-    (_e, cleanPatch: Record<string, unknown>, unsetKeys?: string[]): { ok: true } => {
+    (_e, cleanPatch: Record<string, unknown>, unsetKeys?: string[] | null): { ok: true } => {
       if (cleanPatch === null || typeof cleanPatch !== 'object' || Array.isArray(cleanPatch))
         throw new Error('config:set 的补丁必须是普通对象')
-      if (unsetKeys !== undefined) {
-        if (!Array.isArray(unsetKeys) || unsetKeys.length > 64)
+      // null 与「未传」同义：渲染层 config.set(patch) 只给一个参数，JSON 传输把数组里
+      // 缺省的 undefined 变成 null(JSON.stringify([patch, undefined]) === '[patch,null]')。
+      // registry 的 args schema 本就放行 [patch] / [patch, null] / [patch, unsetKeys] 三种形态，
+      // 这里必须同步放行，否则只传补丁的调用一律被误判成非法 unsetKeys。
+      const keys: string[] | undefined = unsetKeys ?? undefined
+      if (keys !== undefined) {
+        if (!Array.isArray(keys) || keys.length > 64)
           throw new Error('config:set 的 unsetKeys 必须是不超过 64 项的字符串数组')
-        for (const k of unsetKeys)
+        for (const k of keys)
           if (typeof k !== 'string') throw new Error('config:set 的 unsetKeys 必须全为字符串')
       }
-      setConfig(cleanPatch, unsetKeys)
+      setConfig(cleanPatch, keys)
       return { ok: true as const }
     }
   )
